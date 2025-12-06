@@ -511,3 +511,114 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
 
 
 """Configuration for the Unitree G1 23DOF Humanoid robot."""
+
+####################
+Adding thr ethrc humanoid
+####################
+
+HUMANOIDV0_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUsdFileCfg(
+        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_damping.usd",
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.95),  # Adjust based on your robot's standing height
+        joint_pos={
+            # Legs - slight knee bend for stability
+            "left_knee": 0.2,
+            "right_knee": 0.2,
+            "left_ankle_pitch": -0.1,
+            "right_ankle_pitch": -0.1,
+            # Keep everything else at neutral
+            "left_leg_flexor": 0.0,
+            "right_leg_flexor": 0.0,
+            "left_leg_abductor": 0.0,
+            "right_leg_abductor": 0.0,
+            "left_leg_rotor": 0.0,
+            "right_leg_rotor": 0.0,
+            "left_ankle_roll": 0.0,
+            "right_ankle_roll": 0.0,
+            "hip_rotor": 0.0,
+            "hip_abductor0": 0.0,
+            # Arms - keep at neutral or slightly out
+            "left_shoulder_flexor": 0.0,
+            "left_shoulder_abductor": 0.2,
+            "left_arm_rotor0": 0.0,
+            "left_elbow_flexor": 0.3,
+            "left_arm_rotor1": 0.0,
+            "left_wrist_abductor": 0.0,
+            "left_wrist_flexor": 0.0,
+            "right_shoulder_flexor": 0.0,
+            "right_shoulder_abductor": -0.2,
+            "right_arm_rotor0": 0.0,
+            "right_elbow_flexor": 0.3,
+            "right_arm_rotor1": 0.0,
+            "right_wrist_abductor": 0.0,
+            "right_wrist_flexor": 0.0,
+            # Neck - neutral
+            "neck_rotor": 0.0,
+            "neck_flexor": 0.0,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    actuators={
+        "legs": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
+                "left_knee", "left_ankle_roll", "left_ankle_pitch",
+                "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
+                "right_knee", "right_ankle_roll", "right_ankle_pitch",
+            ],
+            effort_limit_sim=200.0,  # Adjust based on your actuators
+            velocity_limit_sim=20.0,
+            stiffness=80.0,  # Start with these, tune later
+            damping=2.0,
+            armature=0.01,
+        ),
+        "waist": ImplicitActuatorCfg(
+            joint_names_expr=["hip_rotor", "hip_abductor0"],
+            effort_limit_sim=200.0,
+            velocity_limit_sim=20.0,
+            stiffness=100.0,
+            damping=5.0,
+            armature=0.01,
+        ),
+        "arms": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
+                "left_elbow_flexor", "left_arm_rotor1", 
+                "left_wrist_abductor", "left_wrist_flexor",
+                "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
+                "right_elbow_flexor", "right_arm_rotor1",
+                "right_wrist_abductor", "right_wrist_flexor",
+            ],
+            effort_limit_sim=50.0,
+            velocity_limit_sim=30.0,
+            stiffness=40.0,
+            damping=1.0,
+            armature=0.01,
+        ),
+        "neck": ImplicitActuatorCfg(
+            joint_names_expr=["neck_rotor", "neck_flexor"],
+            effort_limit_sim=50.0,
+            velocity_limit_sim=30.0,
+            stiffness=40.0,
+            damping=1.0,
+            armature=0.01,
+        ),
+    },
+    # SDK names for deployment (optional - only needed if deploying to real robot)
+    joint_sdk_names=[
+        "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
+        "left_knee", "left_ankle_roll", "left_ankle_pitch",
+        "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
+        "right_knee", "right_ankle_roll", "right_ankle_pitch",
+        "hip_rotor", "hip_abductor0",
+        "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
+        "left_elbow_flexor", "left_arm_rotor1", 
+        "left_wrist_abductor", "left_wrist_flexor",
+        "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
+        "right_elbow_flexor", "right_arm_rotor1",
+        "right_wrist_abductor", "right_wrist_flexor",
+        "neck_rotor", "neck_flexor",
+    ],
+)
