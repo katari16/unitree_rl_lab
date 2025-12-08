@@ -512,16 +512,15 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
 
 """Configuration for the Unitree G1 23DOF Humanoid robot."""
 
-####################
-Adding thr ethrc humanoid
-####################
+
+# adding the ETHRC humanoid RC0
 
 HUMANOIDV0_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
         usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_damping.usd",
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.95),  # Adjust based on your robot's standing height
+        pos=(0.0, 0.0, 1.1),  # Adjust based on your robot's standing height
         joint_pos={
             # Legs - slight knee bend for stability
             "left_knee": 0.2,
@@ -620,5 +619,7 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
         "right_elbow_flexor", "right_arm_rotor1",
         "right_wrist_abductor", "right_wrist_flexor",
         "neck_rotor", "neck_flexor",
+        "left_leg_robstride_upper", "left_leg_robstride_lower",
+        "right_leg_robstride_upper", "right_leg_robstride_lower", 
     ],
 )

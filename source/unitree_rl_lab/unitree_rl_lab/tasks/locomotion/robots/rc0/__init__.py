@@ -8,7 +8,7 @@
 import gymnasium as gym
 
 gym.register(
-    id="RC0-Velocity",
+    id="Unitree-RC0-Velocity",
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
