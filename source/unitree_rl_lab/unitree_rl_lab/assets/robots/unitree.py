@@ -11,7 +11,7 @@ Reference: https://github.com/unitreerobotics/unitree_ros
 import os
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg
+from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg, DCMotorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
 
@@ -520,7 +520,7 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
         usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_damping.usd",
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.1),  # Adjust based on your robot's standing height
+        pos=(0.0, 0.0, 1.1),
         joint_pos={
             # Legs - slight knee bend for stability
             "left_knee": 0.2,
@@ -534,11 +534,11 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             "right_leg_abductor": 0.0,
             "left_leg_rotor": 0.0,
             "right_leg_rotor": 0.0,
-            "left_ankle_roll": 0.0,
-            "right_ankle_roll": 0.0,
+            "left_ankle_yaw": 0.0,
+            "right_ankle_yaw": 0.0,
             "hip_rotor": 0.0,
             "hip_abductor0": 0.0,
-            # Arms - keep at neutral or slightly out
+            # Arms
             "left_shoulder_flexor": 0.0,
             "left_shoulder_abductor": 0.2,
             "left_arm_rotor0": 0.0,
@@ -553,73 +553,117 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             "right_arm_rotor1": 0.0,
             "right_wrist_abductor": 0.0,
             "right_wrist_flexor": 0.0,
-            # Neck - neutral
+            # Neck
             "neck_rotor": 0.0,
             "neck_flexor": 0.0,
         },
         joint_vel={".*": 0.0},
     ),
     actuators={
-        "legs": ImplicitActuatorCfg(
+        # HEJ90 motors for hip and knee joints
+        "hip_and_knee_hej90": DCMotorCfg(
             joint_names_expr=[
-                "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
-                "left_knee", "left_ankle_roll", "left_ankle_pitch",
-                "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
-                "right_knee", "right_ankle_roll", "right_ankle_pitch",
+                "left_leg_flexor",
+                "left_leg_abductor",
+                "left_leg_rotor",
+                "left_knee",
+                "right_leg_flexor",
+                "right_leg_abductor",
+                "right_leg_rotor",
+                "right_knee",
+                "hip_rotor",
+                "hip_abductor0",
             ],
-            effort_limit_sim=200.0,  # Adjust based on your actuators
-            velocity_limit_sim=20.0,
-            stiffness=80.0,  # Start with these, tune later
+            saturation_effort=140.0,  # Stall torque from datasheet
+            effort_limit=80.0,        # Continuous torque (based on operating points table)
+            velocity_limit=10.4,      # Max velocity at 48V
+            stiffness=80.0,
+            damping=4.0,
+            armature=0.1,             # From experienced user
+            viscous_friction=1.0,     # From experienced user
+        ),
+        # HEJ70 motors for shoulder joints
+        "shoulders_hej70": DCMotorCfg(
+            joint_names_expr=[
+                "left_shoulder_flexor",
+                "left_shoulder_abductor",
+                "right_shoulder_flexor",
+                "right_shoulder_abductor",
+            ],
+            saturation_effort=62.0,   # Stall torque from datasheet
+            effort_limit=27.0,        # Nominal (continuous) torque from datasheet
+            velocity_limit=17.8,      # Max velocity at 48V
+            stiffness=50.0,
             damping=2.0,
-            armature=0.01,
+            armature=0.05,            # From experienced user
+            viscous_friction=1.0,     # From experienced user
         ),
-        "waist": ImplicitActuatorCfg(
-            joint_names_expr=["hip_rotor", "hip_abductor0"],
-            effort_limit_sim=200.0,
-            velocity_limit_sim=20.0,
-            stiffness=100.0,
-            damping=5.0,
-            armature=0.01,
-        ),
-        "arms": ImplicitActuatorCfg(
+        # HEJ50 motors for arm joints (elbow, wrist, arm rotors)
+        "arms_hej50": DCMotorCfg(
             joint_names_expr=[
-                "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
-                "left_elbow_flexor", "left_arm_rotor1", 
-                "left_wrist_abductor", "left_wrist_flexor",
-                "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
-                "right_elbow_flexor", "right_arm_rotor1",
-                "right_wrist_abductor", "right_wrist_flexor",
+                "left_arm_rotor0",
+                "left_elbow_flexor",
+                "left_arm_rotor1",
+                "left_wrist_abductor",
+                "left_wrist_flexor",
+                "right_arm_rotor0",
+                "right_elbow_flexor",
+                "right_arm_rotor1",
+                "right_wrist_abductor",
+                "right_wrist_flexor",
             ],
-            effort_limit_sim=50.0,
-            velocity_limit_sim=30.0,
+            saturation_effort=30.0,   # Stall torque from datasheet
+            effort_limit=20.0,        # Continuous torque (based on operating points table)
+            velocity_limit=21.0,      # Max velocity at 48V
             stiffness=40.0,
             damping=1.0,
-            armature=0.01,
+            armature=0.025,           # Scaled from HEJ70 based on inertia ratio
+            viscous_friction=0.8,
         ),
-        "neck": ImplicitActuatorCfg(
-            joint_names_expr=["neck_rotor", "neck_flexor"],
-            effort_limit_sim=50.0,
-            velocity_limit_sim=30.0,
+        # HEJ50 motors for neck joints
+        "neck_hej50": DCMotorCfg(
+            joint_names_expr=[
+                "neck_rotor",
+                "neck_flexor",
+            ],
+            saturation_effort=30.0,
+            effort_limit=20.0,
+            velocity_limit=21.0,
             stiffness=40.0,
             damping=1.0,
-            armature=0.01,
+            armature=0.025,
+            viscous_friction=0.8,
+        ),
+        # Robstride 03 motors for ankle joints
+        "ankles_robstride03": DCMotorCfg(
+            joint_names_expr=[
+                "left_ankle_pitch",
+                "right_ankle_pitch",
+                "left_ankle_yaw",
+                "right_ankle_yaw",
+            ],
+            saturation_effort=60.0,   # Peak torque from datasheet
+            effort_limit=20.0,        # Rated (continuous) torque from datasheet
+            velocity_limit=20.4,      # No-load speed: 195 rpm ≈ 20.4 rad/s
+            stiffness=60.0,
+            damping=2.0,
+            armature=0.02,            # Estimated based on 880g weight and 9:1 ratio
+            viscous_friction=0.5,
         ),
     },
     # SDK names for deployment (optional - only needed if deploying to real robot)
     joint_sdk_names=[
         "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
-        "left_knee", "left_ankle_roll", "left_ankle_pitch",
+        "left_knee", "left_ankle_yaw", "left_ankle_pitch",
         "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
-        "right_knee", "right_ankle_roll", "right_ankle_pitch",
+        "right_knee", "right_ankle_yaw", "right_ankle_pitch",
         "hip_rotor", "hip_abductor0",
         "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
-        "left_elbow_flexor", "left_arm_rotor1", 
+        "left_elbow_flexor", "left_arm_rotor1",
         "left_wrist_abductor", "left_wrist_flexor",
         "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
         "right_elbow_flexor", "right_arm_rotor1",
         "right_wrist_abductor", "right_wrist_flexor",
         "neck_rotor", "neck_flexor",
-        "left_leg_robstride_upper", "left_leg_robstride_lower",
-        "right_leg_robstride_upper", "right_leg_robstride_lower", 
     ],
 )
