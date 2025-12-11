@@ -22,7 +22,7 @@ Follow the standard [unitree_rl_lab installation](https://github.com/unitreerobo
 ```bash
 git clone https://github.com/yourusername/unitree_rl_lab.git
 cd unitree_rl_lab
-git checkout robo-barrow
+git checkout go2-rsl
 conda activate env_isaaclab
 ./unitree_rl_lab.sh -i
 ```
@@ -36,15 +36,15 @@ velocity_command → policy → joint_actions (reject disturbances)
 
 **Force-following (this work):**
 ```
-external_force (computed from F=ma) → policy → joint_actions (minimize force)
+user pushes robot → F_external computed from sensors → policy → joint_actions (minimize force)
 ```
 
-The policy computes external forces using momentum conservation:
+The robot detects external forces using momentum conservation:
 ```
 F_external = m*a_measured - F_expected
 ```
 
-where acceleration is measured from IMU and expected forces from motor commands.
+where acceleration is measured from IMU and expected forces from motor commands. No explicit force input required.
 
 **Observations:** `[F_external, ω, gravity, q, q̇, last_action]` (no velocity commands)
 
