@@ -311,7 +311,7 @@ class RewardsCfg:
 
     # -- robot
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-5.0)
-    base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 0.95})
+    base_height = RewTerm(func=mdp.base_height_l2, weight=-10, params={"target_height": 1.20})
 
     # -- feet
     gait = RewTerm(
@@ -367,7 +367,7 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.5})
+    base_height = DoneTerm(func=mdp.root_height_below_minimum, params={"minimum_height": 0.9})
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
 
 

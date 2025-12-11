@@ -517,11 +517,11 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
 
 HUMANOIDV0_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_damping.usd",
+        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_instanceable.usd",
         activate_contact_sensors=True,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.1),
+        pos=(0.0, 0.0, 1.24),
         joint_pos={
             # Legs - slight knee bend for stability
             "left_knee": 0.2,
@@ -578,8 +578,8 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             saturation_effort=140.0,  # Stall torque from datasheet
             effort_limit=80.0,        # Continuous torque (based on operating points table)
             velocity_limit=10.4,      # Max velocity at 48V
-            stiffness=80.0,
-            damping=4.0,
+            stiffness=400.0,         #init: 80
+            damping=40.0,            #init 20
             armature=0.1,             # From experienced user
             viscous_friction=1.0,     # From experienced user
         ),
@@ -646,8 +646,8 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             saturation_effort=60.0,   # Peak torque from datasheet
             effort_limit=20.0,        # Rated (continuous) torque from datasheet
             velocity_limit=20.4,      # No-load speed: 195 rpm ≈ 20.4 rad/s
-            stiffness=60.0,
-            damping=2.0,
+            stiffness=200.0,
+            damping=20.0,
             armature=0.02,            # Estimated based on 880g weight and 9:1 ratio
             viscous_friction=0.5,
         ),
