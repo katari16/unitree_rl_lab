@@ -356,7 +356,6 @@ class RewardsCfg:
                     "base_link", "head_1",
                     "femur_left_1", "femur_right_1",
                     "tibia_subframe_left_1", "tibia_subframe_right_1",
-                    "knee_left_1", "knee_right_1",
                 ],
             ),
         },

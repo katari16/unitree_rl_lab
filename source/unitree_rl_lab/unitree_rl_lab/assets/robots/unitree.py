@@ -518,6 +518,7 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
 HUMANOIDV0_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
         usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_damping.usd",
+        activate_contact_sensors=True,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 1.1),
@@ -534,8 +535,8 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             "right_leg_abductor": 0.0,
             "left_leg_rotor": 0.0,
             "right_leg_rotor": 0.0,
-            "left_ankle_yaw": 0.0,
-            "right_ankle_yaw": 0.0,
+            "left_ankle_roll": 0.0,
+            "right_ankle_roll": 0.0,
             "hip_rotor": 0.0,
             "hip_abductor0": 0.0,
             # Arms
@@ -638,9 +639,9 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
         "ankles_robstride03": DCMotorCfg(
             joint_names_expr=[
                 "left_ankle_pitch",
+                "right_ankle_roll",
+                "left_ankle_roll",
                 "right_ankle_pitch",
-                "left_ankle_yaw",
-                "right_ankle_yaw",
             ],
             saturation_effort=60.0,   # Peak torque from datasheet
             effort_limit=20.0,        # Rated (continuous) torque from datasheet
@@ -654,9 +655,9 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
     # SDK names for deployment (optional - only needed if deploying to real robot)
     joint_sdk_names=[
         "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
-        "left_knee", "left_ankle_yaw", "left_ankle_pitch",
+        "left_knee", "left_ankle_pitch", "left_ankle_roll",
         "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
-        "right_knee", "right_ankle_yaw", "right_ankle_pitch",
+        "right_knee", "right_ankle_pitch", "right_ankle_roll",
         "hip_rotor", "hip_abductor0",
         "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
         "left_elbow_flexor", "left_arm_rotor1",
@@ -665,5 +666,7 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
         "right_elbow_flexor", "right_arm_rotor1",
         "right_wrist_abductor", "right_wrist_flexor",
         "neck_rotor", "neck_flexor",
+        "left_leg_robstride_lower", "left_leg_robstride_upper",
+        "right_leg_robstride_lower", "right_leg_robstride_upper",
     ],
 )

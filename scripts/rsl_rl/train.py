@@ -180,6 +180,36 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
+    # ========== DEBUG: Check for NaN ==========
+    # print("\n" + "="*50)
+    # print("DEBUG: Checking for NaN/Inf in observations and rewards")
+    # print("="*50)
+
+    # obs, extras = env.get_observations()
+    # print(f"Obs shape: {obs.shape}")
+    # print(f"Obs has NaN: {torch.isnan(obs).any().item()}")
+    # print(f"Obs has Inf: {torch.isinf(obs).any().item()}")
+    # print(f"Obs min/max: {obs.min().item():.4f}, {obs.max().item():.4f}")
+
+    # if torch.isnan(obs).any():
+    #     nan_indices = torch.where(torch.isnan(obs))
+    #     print(f"NaN at indices: {nan_indices}")
+
+    # # Take one zero-action step
+    # action = torch.zeros(env.num_envs, env.num_actions, device=env.device)
+    # obs, rewards, dones, extras = env.step(action)  # 4 values, not 5
+    # print(f"\nAfter zero-action step:")
+    # print(f"Obs has NaN: {torch.isnan(obs).any().item()}")
+    # print(f"Rewards has NaN: {torch.isnan(rewards).any().item()}")
+    # print(f"Rewards min/max: {rewards.min().item():.4f}, {rewards.max().item():.4f}")
+
+    # if torch.isnan(obs).any() or torch.isnan(rewards).any():
+    #     print("\n*** NaN DETECTED - Check your robot config, sensors, or reward functions ***")
+    #     exit(1)
+
+    # print("="*50 + "\n")
+    # ========== END DEBUG ==========
+
     # create runner from rsl-rl
     runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
