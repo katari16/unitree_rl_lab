@@ -578,8 +578,8 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             saturation_effort=140.0,  # Stall torque from datasheet
             effort_limit=80.0,        # Continuous torque (based on operating points table)
             velocity_limit=10.4,      # Max velocity at 48V
-            stiffness=400.0,         #init: 80
-            damping=40.0,            #init 20
+            stiffness=80.0,         #init: 80
+            damping=4.0,            #init 20
             armature=0.1,             # From experienced user
             viscous_friction=1.0,     # From experienced user
         ),
@@ -646,8 +646,8 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
             saturation_effort=60.0,   # Peak torque from datasheet
             effort_limit=20.0,        # Rated (continuous) torque from datasheet
             velocity_limit=20.4,      # No-load speed: 195 rpm ≈ 20.4 rad/s
-            stiffness=200.0,
-            damping=20.0,
+            stiffness=40.0,
+            damping=2.0,
             armature=0.02,            # Estimated based on 880g weight and 9:1 ratio
             viscous_friction=0.5,
         ),
@@ -668,5 +668,268 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
         "neck_rotor", "neck_flexor",
         "left_leg_robstride_lower", "left_leg_robstride_upper",
         "right_leg_robstride_lower", "right_leg_robstride_upper",
+    ],
+)
+
+
+
+HUMANOIDV1_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUsdFileCfg(
+        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_instanceable.usd",
+        activate_contact_sensors=True,
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 1.24),
+        joint_pos={
+            # Legs - slight knee bend for stability
+            "left_knee": 0.2,
+            "right_knee": 0.2,
+            "left_ankle_pitch": -0.1,
+            "right_ankle_pitch": -0.1,
+            # Keep everything else at neutral
+            "left_leg_flexor": 0.0,
+            "right_leg_flexor": 0.0,
+            "left_leg_abductor": 0.0,
+            "right_leg_abductor": 0.0,
+            "left_leg_rotor": 0.0,
+            "right_leg_rotor": 0.0,
+            "left_ankle_roll": 0.0,
+            "right_ankle_roll": 0.0,
+            "hip_rotor": 0.0,
+            "hip_abductor0": 0.0,
+            # Arms
+            "left_shoulder_flexor": 0.0,
+            "left_shoulder_abductor": 0.2,
+            "left_arm_rotor0": 0.0,
+            "left_elbow_flexor": 0.3,
+            "left_arm_rotor1": 0.0,
+            "left_wrist_abductor": 0.0,
+            "left_wrist_flexor": 0.0,
+            "right_shoulder_flexor": 0.0,
+            "right_shoulder_abductor": -0.2,
+            "right_arm_rotor0": 0.0,
+            "right_elbow_flexor": 0.3,
+            "right_arm_rotor1": 0.0,
+            "right_wrist_abductor": 0.0,
+            "right_wrist_flexor": 0.0,
+            # Neck
+            "neck_rotor": 0.0,
+            "neck_flexor": 0.0,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    actuators={
+        # Hip flexors/rotors (equivalent to G1 hip_pitch/hip_yaw)
+        "hip_main": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_leg_flexor",
+                "right_leg_flexor",
+                "left_leg_rotor",
+                "right_leg_rotor",
+                "hip_rotor",
+            ],
+            effort_limit=88,
+            velocity_limit=32.0,
+            stiffness=100.0,
+            damping=2.0,
+            armature=0.01,
+        ),
+        # Hip abductors and knees (equivalent to G1 hip_roll/knee)
+        "hip_roll_and_knee": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_leg_abductor",
+                "right_leg_abductor",
+                "left_knee",
+                "right_knee",
+                "hip_abductor0",
+            ],
+            effort_limit=139,
+            velocity_limit=20.0,
+            stiffness={
+                ".*_leg_abductor": 100.0,
+                ".*_knee": 150.0,
+                "hip_abductor0": 200.0,
+            },
+            damping={
+                ".*_leg_abductor": 2.0,
+                ".*_knee": 4.0,
+                "hip_abductor0": 5.0,
+            },
+            armature=0.01,
+        ),
+        # Ankles
+        "ankles": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_ankle_pitch",
+                "right_ankle_pitch",
+                "left_ankle_roll",
+                "right_ankle_roll",
+            ],
+            effort_limit=35,
+            velocity_limit=30,
+            stiffness=40.0,
+            damping=2.0,
+            armature=0.01,
+        ),
+        # Shoulders and arms
+        "arms": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_shoulder_flexor",
+                "left_shoulder_abductor",
+                "left_arm_rotor0",
+                "left_elbow_flexor",
+                "left_arm_rotor1",
+                "left_wrist_abductor",
+                "left_wrist_flexor",
+                "right_shoulder_flexor",
+                "right_shoulder_abductor",
+                "right_arm_rotor0",
+                "right_elbow_flexor",
+                "right_arm_rotor1",
+                "right_wrist_abductor",
+                "right_wrist_flexor",
+            ],
+            effort_limit=25,
+            velocity_limit=37,
+            stiffness=40.0,
+            damping=1.0,
+            armature=0.01,
+        ),
+        # Neck
+        "neck": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "neck_rotor",
+                "neck_flexor",
+            ],
+            effort_limit=25,
+            velocity_limit=37,
+            stiffness=40.0,
+            damping=1.0,
+            armature=0.01,
+        ),
+    },
+    joint_sdk_names=[
+        "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
+        "left_knee", "left_ankle_pitch", "left_ankle_roll",
+        "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
+        "right_knee", "right_ankle_pitch", "right_ankle_roll",
+        "hip_rotor", "hip_abductor0",
+        "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
+        "left_elbow_flexor", "left_arm_rotor1",
+        "left_wrist_abductor", "left_wrist_flexor",
+        "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
+        "right_elbow_flexor", "right_arm_rotor1",
+        "right_wrist_abductor", "right_wrist_flexor",
+        "neck_rotor", "neck_flexor",
+    ],
+)
+
+
+HUMANOIDV2_CFG = UnitreeArticulationCfg(
+    spawn=UnitreeUsdFileCfg(
+        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_instanceable.usd",
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 1.24),  # Adjust based on your robot's standing height
+        joint_pos={
+            # Legs - slight knee bend for stability
+            "left_knee": 0.3,
+            "right_knee": 0.3,
+            "left_ankle_pitch": 0.0,
+            "right_ankle_pitch": 0.0,
+            # Keep everything else at neutral
+            "left_leg_flexor": 0.0,
+            "right_leg_flexor": 0.0,
+            "left_leg_abductor": 0.0,
+            "right_leg_abductor": 0.0,
+            "left_leg_rotor": 0.0,
+            "right_leg_rotor": 0.0,
+            "left_ankle_roll": 0.0,
+            "right_ankle_roll": 0.0,
+            "hip_rotor": 0.0,
+            "hip_abductor0": 0.0,
+            # Arms - keep at neutral or slightly out
+            "left_shoulder_flexor": 0.0,
+            "left_shoulder_abductor": 0.0,
+            "left_arm_rotor0": 0.0,
+            "left_elbow_flexor": 0.3,
+            "left_arm_rotor1": 0.0,
+            "left_wrist_abductor": 0.0,
+            "left_wrist_flexor": 0.0,
+            "right_shoulder_flexor": 0.0,
+            "right_shoulder_abductor": 0.0,
+            "right_arm_rotor0": 0.0,
+            "right_elbow_flexor": 0.3,
+            "right_arm_rotor1": 0.0,
+            "right_wrist_abductor": 0.0,
+            "right_wrist_flexor": 0.0,
+            # Neck - neutral
+            "neck_rotor": 0.0,
+            "neck_flexor": 0.0,
+        },
+        joint_vel={".*": 0.0},
+    ),
+    actuators={
+        "legs": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
+                "left_knee", "left_ankle_roll", "left_ankle_pitch",
+                "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
+                "right_knee", "right_ankle_roll", "right_ankle_pitch",
+            ],
+            effort_limit_sim=50.0,  # Adjust based on your actuators
+            velocity_limit_sim=20.0,
+            stiffness=40.0,  # Start with these, tune later
+            damping=1.0,
+            armature=0.01,
+        ),
+        "waist": ImplicitActuatorCfg(
+            joint_names_expr=["hip_rotor", "hip_abductor0"],
+            effort_limit_sim=200.0,
+            velocity_limit_sim=20.0,
+            stiffness=100.0,
+            damping=5.0,
+            armature=0.01,
+        ),
+        "arms": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
+                "left_elbow_flexor", "left_arm_rotor1", 
+                "left_wrist_abductor", "left_wrist_flexor",
+                "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
+                "right_elbow_flexor", "right_arm_rotor1",
+                "right_wrist_abductor", "right_wrist_flexor",
+            ],
+            effort_limit_sim=50.0,
+            velocity_limit_sim=30.0,
+            stiffness=40.0,
+            damping=1.0,
+            armature=0.01,
+        ),
+        "neck": ImplicitActuatorCfg(
+            joint_names_expr=["neck_rotor", "neck_flexor"],
+            effort_limit_sim=50.0,
+            velocity_limit_sim=30.0,
+            stiffness=40.0,
+            damping=1.0,
+            armature=0.01,
+        ),
+    },
+    # SDK names for deployment (optional - only needed if deploying to real robot)
+    joint_sdk_names=[
+        "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
+        "left_knee", "left_ankle_roll", "left_ankle_pitch",
+        "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
+        "right_knee", "right_ankle_roll", "right_ankle_pitch",
+        "hip_rotor", "hip_abductor0",
+        "left_shoulder_flexor", "left_shoulder_abductor", "left_arm_rotor0",
+        "left_elbow_flexor", "left_arm_rotor1", 
+        "left_wrist_abductor", "left_wrist_flexor",
+        "right_shoulder_flexor", "right_shoulder_abductor", "right_arm_rotor0",
+        "right_elbow_flexor", "right_arm_rotor1",
+        "right_wrist_abductor", "right_wrist_flexor",
+        "neck_rotor", "neck_flexor",
+        "left_leg_robstride_upper", "left_leg_robstride_lower",
+        "right_leg_robstride_upper", "right_leg_robstride_lower", 
     ],
 )

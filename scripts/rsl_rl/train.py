@@ -181,34 +181,30 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
     # ========== DEBUG: Check for NaN ==========
-    # print("\n" + "="*50)
-    # print("DEBUG: Checking for NaN/Inf in observations and rewards")
-    # print("="*50)
+    print("\n" + "="*50)
+    print("DEBUG: Checking for NaN/Inf in observations and rewards")
+    print("="*50)
 
-    # obs, extras = env.get_observations()
-    # print(f"Obs shape: {obs.shape}")
-    # print(f"Obs has NaN: {torch.isnan(obs).any().item()}")
-    # print(f"Obs has Inf: {torch.isinf(obs).any().item()}")
-    # print(f"Obs min/max: {obs.min().item():.4f}, {obs.max().item():.4f}")
+    obs, extras = env.get_observations()
+    print(f"Obs shape: {obs.shape}")
+    print(f"Obs has NaN: {torch.isnan(obs).any().item()}")
+    print(f"Obs has Inf: {torch.isinf(obs).any().item()}")
+    print(f"Obs min/max: {obs.min().item():.4f}, {obs.max().item():.4f}")
 
-    # if torch.isnan(obs).any():
-    #     nan_indices = torch.where(torch.isnan(obs))
-    #     print(f"NaN at indices: {nan_indices}")
+    # ADD THIS - check velocity commands
+    vel_cmd = env.unwrapped.command_manager.get_command("base_velocity")
+    print(f"Velocity command shape: {vel_cmd.shape}")
+    print(f"Velocity command [0]: {vel_cmd[0]}")
+    print(f"Velocity command min/max: {vel_cmd.min().item():.4f}, {vel_cmd.max().item():.4f}")
 
-    # # Take one zero-action step
-    # action = torch.zeros(env.num_envs, env.num_actions, device=env.device)
-    # obs, rewards, dones, extras = env.step(action)  # 4 values, not 5
-    # print(f"\nAfter zero-action step:")
-    # print(f"Obs has NaN: {torch.isnan(obs).any().item()}")
-    # print(f"Rewards has NaN: {torch.isnan(rewards).any().item()}")
-    # print(f"Rewards min/max: {rewards.min().item():.4f}, {rewards.max().item():.4f}")
+    # Take one zero-action step
+    action = torch.zeros(env.num_envs, env.num_actions, device=env.device)
+    obs, rewards, dones, extras = env.step(action)
 
-    # if torch.isnan(obs).any() or torch.isnan(rewards).any():
-    #     print("\n*** NaN DETECTED - Check your robot config, sensors, or reward functions ***")
-    #     exit(1)
-
-    # print("="*50 + "\n")
-    # ========== END DEBUG ==========
+    # Check commands again after step
+    vel_cmd = env.unwrapped.command_manager.get_command("base_velocity")
+    print(f"\nAfter step - Velocity command [0]: {vel_cmd[0]}")
+    print(f"After step - Velocity command min/max: {vel_cmd.min().item():.4f}, {vel_cmd.max().item():.4f}")
 
     # create runner from rsl-rl
     runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
