@@ -1,8 +1,3 @@
-# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 import math
 import isaaclab.sim as sim_utils
 import isaaclab.terrains as terrain_gen
@@ -21,7 +16,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-from unitree_rl_lab.assets.robots.unitree import HUMANOIDV0_CFG as ROBOT_CFG  # Use the new config!
+from unitree_rl_lab.assets.robots.unitree import HUMANOIDV0_CFG as ROBOT_CFG #this is the maxon motor cfg, import other cfgs as needed
 from unitree_rl_lab.tasks.locomotion import mdp
 
 
@@ -30,10 +25,10 @@ from unitree_rl_lab.tasks.locomotion import mdp
 class SimpleSceneCfg(InteractiveSceneCfg):
     """Minimal scene: flat ground + robot + contact sensor."""
 
-    # Flat ground - no terrain complexity initially
+
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
-        terrain_type="plane",  # Start with flat plane!
+        terrain_type="plane", 
         terrain_generator=None,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -48,26 +43,23 @@ class SimpleSceneCfg(InteractiveSceneCfg):
     # Robot
     robot: ArticulationCfg = ROBOT_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
-    # Contact sensor - essential for feet detection
     contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*",
         history_length=3,
         track_air_time=True,
     )
 
-    # Lighting
+
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(intensity=750.0),
     )
 
 
-# =============================================================================
-# EVENTS - Minimal randomization to start
-# =============================================================================
+
 @configclass
 class SimpleEventCfg:
-    """Minimal events: just reset. Add randomization later."""
+    """Minimal events: Add randomization later."""
 
     # Reset robot pose
     reset_base = EventTerm(
@@ -91,15 +83,11 @@ class SimpleEventCfg:
         func=mdp.reset_joints_by_scale,
         mode="reset",
         params={
-            "position_range": (1.0, 1.0),  # Exactly default position
-            "velocity_range": (0.0, 0.0),  # Zero velocity
+            "position_range": (1.0, 1.0), 
+            "velocity_range": (0.0, 0.0), 
         },
     )
 
-
-# =============================================================================
-# COMMANDS - Simple velocity commands
-# =============================================================================
 @configclass
 class SimpleCommandsCfg:
     """Fixed velocity range - no curriculum initially."""
@@ -107,21 +95,20 @@ class SimpleCommandsCfg:
     base_velocity = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
-        rel_standing_envs=0.1,      # 10% of envs get zero command (learn to stand)
-        rel_heading_envs=0.0,       # No heading command
+        rel_standing_envs=0.1,      
+        rel_heading_envs=0.0,        
         heading_command=False,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-0.5, 0.5),  # Slow walking first
+            lin_vel_x=(-0.5, 0.5),
             lin_vel_y=(-0.3, 0.3),
             ang_vel_z=(-0.5, 0.5),
         ),
     )
 
 
-# =============================================================================
+
 # ACTIONS - Only control legs and waist
-# =============================================================================
 @configclass
 class SimpleActionsCfg:
     """Control only what's needed for walking."""
@@ -129,22 +116,19 @@ class SimpleActionsCfg:
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=[
-            # Legs (12 DOF)
             "left_leg_flexor", "left_leg_abductor", "left_leg_rotor",
             "left_knee", "left_ankle_roll", "left_ankle_pitch",
             "right_leg_flexor", "right_leg_abductor", "right_leg_rotor",
             "right_knee", "right_ankle_roll", "right_ankle_pitch",
-            # Waist (2 DOF) - important for balance
+            # Waist (2 DOF) 
             "hip_rotor", "hip_abductor0",
         ],
         scale=0.25,  # Actions scaled by 0.25 rad
-        use_default_offset=True,  # Actions are offsets from default pose
+        use_default_offset=True,  
     )
 
 
-# =============================================================================
-# OBSERVATIONS - Minimal state for policy
-# =============================================================================
+
 @configclass
 class SimpleObservationsCfg:
     """What the policy needs to know."""
@@ -153,18 +137,17 @@ class SimpleObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Proprioceptive observations only - no vision/heightmap."""
 
-        # Body state
+
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
 
-        # Commands
+
         velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
 
-        # Joint state
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
         joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
 
-        # Previous action (helps with smoothness)
+
         last_action = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
@@ -174,14 +157,10 @@ class SimpleObservationsCfg:
     policy: PolicyCfg = PolicyCfg()
 
 
-# =============================================================================
-# REWARDS - The heart of locomotion learning
-# =============================================================================
+
 @configclass
 class SimpleRewardsCfg:
     """
-    Reward design philosophy:
-    
     POSITIVE rewards for TASK goals:
       - Track commanded velocity
       - Stay alive
@@ -195,60 +174,38 @@ class SimpleRewardsCfg:
       - Bad contacts
       - Falling
     
-    Rule of thumb: Start with few rewards, add more only if needed.
     """
 
-    # =========================================================================
-    # TASK: What we want (POSITIVE)
-    # =========================================================================
-
-    # Track linear velocity command
     track_lin_vel_xy = RewTerm(
         func=mdp.track_lin_vel_xy_yaw_frame_exp,
-        weight=1.0,  # Main objective
+        weight=1.0, 
         params={"command_name": "base_velocity", "std": 0.5},
     )
 
-    # Track angular velocity command
     track_ang_vel_z = RewTerm(
         func=mdp.track_ang_vel_z_exp,
         weight=0.5,
         params={"command_name": "base_velocity", "std": 0.5},
     )
 
-    # Reward for staying alive
     alive = RewTerm(func=mdp.is_alive, weight=0.5)
 
-    # =========================================================================
-    # REGULARIZATION: Smooth & efficient motion (small negative)
-    # =========================================================================
-
-    # Penalize jerky actions
+# regularization
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
 
-    # Penalize joint accelerations (smoothness)
     joint_acc = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
 
-    # Penalize energy consumption
     energy = RewTerm(func=mdp.energy, weight=-1e-4)
 
-    # Penalize vertical body velocity (bouncing)
     lin_vel_z = RewTerm(func=mdp.lin_vel_z_l2, weight=-0.5)
 
-    # Penalize body roll/pitch velocity
     ang_vel_xy = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
 
-    # Keep body flat
     flat_orientation = RewTerm(func=mdp.flat_orientation_l2, weight=-1.0)
 
-    # =========================================================================
-    # SAFETY: Don't do bad things (larger negative)
-    # =========================================================================
 
-    # Penalize hitting joint limits
     joint_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=-1.0)
 
-    # Penalize bad contacts (knees, body hitting ground)
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
@@ -261,54 +218,36 @@ class SimpleRewardsCfg:
         },
     )
 
-    # Big penalty for termination (falling)
     termination_penalty = RewTerm(func=mdp.is_terminated, weight=-200.0)
 
 
-# =============================================================================
-# TERMINATIONS - When to end episode
-# =============================================================================
+
 @configclass
 class SimpleTerminationsCfg:
     """Simple termination: timeout or fall."""
 
-    # Episode timeout
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
-    # Fell down (base too low)
     base_height = DoneTerm(
         func=mdp.root_height_below_minimum,
         params={"minimum_height": 0.7},  # Generous threshold
     )
 
-    # Flipped over
     bad_orientation = DoneTerm(
         func=mdp.bad_orientation,
-        params={"limit_angle": 1.0},  # ~57 degrees - generous
+        params={"limit_angle": 1.0}, 
     )
 
-
-# =============================================================================
-# MAIN CONFIG - Putting it all together
-# =============================================================================
 @configclass
 class RobotEnvCfg(ManagerBasedRLEnvCfg):
     """
     Simple humanoid locomotion environment.
-    
-    Training tips:
-    1. Start with this simple config
-    2. Watch TensorBoard for reward components
-    3. If robot falls immediately: check actuator config
-    4. If robot doesn't move: increase task reward weights
-    5. If robot moves but looks bad: add regularization
-    6. Once working: add terrain, curriculum, randomization
+
     """
 
     # Scene
     scene: SimpleSceneCfg = SimpleSceneCfg(num_envs=4096, env_spacing=2.5)
 
-    # Core MDP components
     observations: SimpleObservationsCfg = SimpleObservationsCfg()
     actions: SimpleActionsCfg = SimpleActionsCfg()
     commands: SimpleCommandsCfg = SimpleCommandsCfg()
@@ -316,26 +255,20 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
     terminations: SimpleTerminationsCfg = SimpleTerminationsCfg()
     events: SimpleEventCfg = SimpleEventCfg()
 
-    # No curriculum - add later once basic walking works
     curriculum = None
 
     def __post_init__(self):
         """Simulation settings."""
-        # Timing
-        self.decimation = 4          # Policy runs at 50 Hz (200 Hz physics / 4)
-        self.episode_length_s = 20.0  # 20 second episodes
+        self.decimation = 4      
+        self.episode_length_s = 20.0 
         
-        # Physics
-        self.sim.dt = 0.005          # 200 Hz physics
+        self.sim.dt = 0.005   
         self.sim.render_interval = self.decimation
         
-        # Sensor update
         self.scene.contact_forces.update_period = self.sim.dt
 
 
-# =============================================================================
-# PLAY CONFIG - For evaluation
-# =============================================================================
+
 @configclass
 class RobotPlayEnvCfg(RobotEnvCfg):
     def __post_init__(self):

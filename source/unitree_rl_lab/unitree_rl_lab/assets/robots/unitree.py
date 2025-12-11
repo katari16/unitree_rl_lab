@@ -515,9 +515,11 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
 
 # adding the ETHRC humanoid RC0
 
+
+#this is the maxon config. got info from rsl for params
 HUMANOIDV0_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_instanceable.usd",
+        usd_path="/home/ubuntu/unitree_rl_lab/rc_models/humanoidv0/humanoidv0_instanceable.usd",
         activate_contact_sensors=True,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
@@ -673,9 +675,11 @@ HUMANOIDV0_CFG = UnitreeArticulationCfg(
 
 
 
+
+#this is the motor configs of the unitree. 
 HUMANOIDV1_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_instanceable.usd",
+        usd_path="/home/ubuntu/unitree_rl_lab/rc_models/humanoidv0/humanoidv0_instanceable.usd",
         activate_contact_sensors=True,
     ),
     init_state=ArticulationCfg.InitialStateCfg(
@@ -821,13 +825,16 @@ HUMANOIDV1_CFG = UnitreeArticulationCfg(
         "right_elbow_flexor", "right_arm_rotor1",
         "right_wrist_abductor", "right_wrist_flexor",
         "neck_rotor", "neck_flexor",
+        "left_leg_robstride_lower", "left_leg_robstride_upper",
+        "right_leg_robstride_lower", "right_leg_robstride_upper",
     ],
 )
 
 
+#this is also motors configs of the unitree but with different params. just testing weaker motors and how it changes behavr. 
 HUMANOIDV2_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUsdFileCfg(
-        usd_path="/home/ubuntu/ethr_rc_robot_assets/humanoidv0/humanoidv0_instanceable.usd",
+        usd_path="/home/ubuntu/unitree_rl_lab/rc_models/humanoidv0/humanoidv0_instanceable.usd",
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 1.24),  # Adjust based on your robot's standing height
