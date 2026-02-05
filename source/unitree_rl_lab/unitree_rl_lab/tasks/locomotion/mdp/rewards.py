@@ -10,6 +10,7 @@ except ImportError:
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import ContactSensor
+from isaaclab.utils.math import euler_xyz_from_quat
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -76,6 +77,20 @@ def joint_position_penalty(
     return torch.where(torch.logical_or(cmd > 0.0, body_vel > velocity_threshold), reward, stand_still_scale * reward)
 
 
+
+def base_pose_penalty(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, desired_height: float
+) -> torch.Tensor:
+    """Paper rpose: φ² + ψ² + 10·(y - ydes)²"""
+    asset: Articulation = env.scene[asset_cfg.name]
+    
+    # Get roll, pitch, yaw from quaternion
+    roll, pitch, yaw = euler_xyz_from_quat(asset.data.root_quat_w)
+    
+    # Height error
+    height_error = asset.data.root_pos_w[:, 2] - desired_height
+    
+    return roll**2 + pitch**2 + 10 * height_error**2
+
 """
 Feet rewards.
 """
@@ -91,12 +106,11 @@ def feet_stumble(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Te
     return reward
 
 
-def feet_height_body(
+def feet_clearence_dense(
     env: ManagerBasedRLEnv,
     command_name: str,
     asset_cfg: SceneEntityCfg,
     target_height: float,
-    tanh_mult: float,
 ) -> torch.Tensor:
     """Reward the swinging feet for clearing a specified height off the ground"""
     asset: RigidObject = env.scene[asset_cfg.name]
@@ -110,11 +124,52 @@ def feet_height_body(
         footpos_in_body_frame[:, i, :] = quat_apply_inverse(asset.data.root_quat_w, cur_footpos_translated[:, i, :])
         footvel_in_body_frame[:, i, :] = quat_apply_inverse(asset.data.root_quat_w, cur_footvel_translated[:, i, :])
     foot_z_target_error = torch.square(footpos_in_body_frame[:, :, 2] - target_height).view(env.num_envs, -1)
-    foot_velocity_tanh = torch.tanh(tanh_mult * torch.norm(footvel_in_body_frame[:, :, :2], dim=2))
-    reward = torch.sum(foot_z_target_error * foot_velocity_tanh, dim=1)
+
+    # this is reward is more oermisice on fast swings but we want smooth motion when we push the robot so palize velocity^2 rather than tanh(velocity)
+    # foot_velocity_tanh = torch.tanh(tanh_mult * torch.norm(footvel_in_body_frame[:, :, :2], dim=2))
+    # reward = torch.sum(foot_z_target_error * foot_velocity_tanh, dim=1)
+
+    # lets penalize more strong movement with L2 norm
+    foot_velocity_sq = torch.sum(footvel_in_body_frame[:, :, :2]**2, dim=2)  # ||v_xz||²
+    reward = torch.sum(foot_z_target_error * foot_velocity_sq, dim=1)
+
     reward *= torch.linalg.norm(env.command_manager.get_command(command_name), dim=1) > 0.1
     reward *= torch.clamp(-env.scene["robot"].data.projected_gravity_b[:, 2], 0, 0.7) / 0.7
+
     return reward
+
+
+def foot_height_sparse(env: ManagerBasedRLEnv,asset_cfg: SceneEntityCfg, sensor_cfg: SceneEntityCfg,target_height: float
+) -> torch.Tensor:
+    """Paper rh: Σ (ppeak / pdes - 1)² - Applied when landing"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    
+    # Initialize peak height tracker
+    if not hasattr(env, 'foot_peak_heights'):   
+        env.foot_peak_heights = torch.zeros(
+            env.num_envs, len(asset_cfg.body_ids), device=env.device
+        )
+    
+    foot_heights = asset.data.body_pos_w[:, asset_cfg.body_ids, 2]
+    is_contact = contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] > 0
+    
+    # Track peak during swing, reset when in contact
+    peak_before_reset = env.foot_peak_heights.clone()
+
+    env.foot_peak_heights = torch.where(
+        is_contact,
+        foot_heights,
+        torch.maximum(env.foot_peak_heights, foot_heights)
+    )
+    
+    # Penalty at touchdown: (ppeak / pdes - 1)²
+    just_contacted = (contact_sensor.data.current_contact_time[:, sensor_cfg.body_ids] < env.step_dt) & is_contact
+    penalty = ((peak_before_reset / target_height - 1)**2) * just_contacted.float()
+    return torch.sum(penalty, dim=1)
+    
+
+
 
 
 def foot_clearance_reward(
@@ -223,3 +278,111 @@ def joint_mirror(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg, mirror_joint
         )
     reward *= 1 / len(mirror_joints) if len(mirror_joints) > 0 else 0
     return reward
+
+
+def follow_force_direction(env: ManagerBasedRLEnv,std: float,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot", body_names="base")
+) -> torch.Tensor:
+    """Reward for moving in the direction of applied force (exponential kernel)."""
+    asset: Articulation = env.scene[asset_cfg.name]
+    
+    # Get applied force in body frame
+    external_force_b = asset._external_force_b[:, asset_cfg.body_ids, :].squeeze(1)
+
+    external_force_b_xy = external_force_b.clone()
+    external_force_b_xy[:, 2] = 0.0
+
+    # Get current velocity in body frame
+    velocity_b = asset.data.root_lin_vel_b
+    
+    # Normalize to get directions
+    force_norm = torch.norm(external_force_b_xy, dim=1, keepdim=True).clamp(min=1e-6)
+    vel_norm = torch.norm(velocity_b, dim=1, keepdim=True).clamp(min=1e-6)
+    
+    force_dir = external_force_b_xy / force_norm
+    vel_dir = velocity_b / vel_norm
+    
+    # Dot product ∈ [-1, 1]
+    alignment = torch.sum(force_dir * vel_dir, dim=1)
+    
+    # Exponential kernel: converts [-1, 1] to (0, 1]
+    # alignment=1 → reward=1, alignment=-1 → reward≈0.14
+    alignment_reward = torch.exp((alignment - 1) / (std**2))
+    
+    # Add: Speed matching component
+    v_target = 0.5  # Target speed in m/s when force applied
+    vel_magnitude = vel_norm.squeeze(1)
+    speed_error = torch.abs(vel_magnitude - v_target)
+    speed_reward = torch.exp(-speed_error / std)
+
+    # Combine: both direction AND speed matter
+    reward = alignment_reward * speed_reward
+
+
+    # Only apply when force is significant
+    reward = reward * (force_norm.squeeze(1) > 2.5).float()
+
+    env.extras["force_alignment_mean"] = alignment.mean()
+    env.extras["force_reward_mean"] = reward.mean()
+    return reward
+
+def track_lin_vel_xy_exp_staged(
+    env: ManagerBasedRLEnv,
+    std: float,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Linear velocity tracking with temporal stage support.
+
+    During RECOVERY stage, returns a frozen constant value instead of actual
+    tracking reward. This allows the robot to deviate from commands without
+    penalty, encouraging compliant behavior per Hartmann et al. (2024).
+    """
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    lin_vel_error = torch.sum(
+        torch.square(
+            env.command_manager.get_command(command_name)[:, :2] -
+            asset.data.root_lin_vel_b[:, :2]
+        ),
+        dim=1
+    )
+    normal_reward = torch.exp(-lin_vel_error / std)
+
+    if hasattr(env, '_temporal_stage_recovery_mask'):
+        mask = env._temporal_stage_recovery_mask
+        frozen = env._temporal_stage_frozen_value
+        return (1.0 - mask) * normal_reward + mask * frozen
+
+    return normal_reward
+
+
+def track_ang_vel_z_exp_staged(
+    env: ManagerBasedRLEnv,
+    std: float,
+    command_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Angular velocity tracking with temporal stage support.
+
+    During RECOVERY stage, returns a frozen constant value instead of actual
+    tracking reward. This allows the robot to deviate from commands without
+    penalty, encouraging compliant behavior per Hartmann et al. (2024).
+
+    Paper: "we exchange the reward rlin and rang by constant values"
+    """
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    ang_vel_error = torch.square(
+        env.command_manager.get_command(command_name)[:, 2] -
+        asset.data.root_ang_vel_b[:, 2]
+    )
+    normal_reward = torch.exp(-ang_vel_error / std)
+
+    if hasattr(env, '_temporal_stage_recovery_mask'):
+        mask = env._temporal_stage_recovery_mask
+        # Use same frozen value ratio as linear (could be separate param)
+        frozen = env._temporal_stage_frozen_value
+        return (1.0 - mask) * normal_reward + mask * frozen
+
+    return normal_reward

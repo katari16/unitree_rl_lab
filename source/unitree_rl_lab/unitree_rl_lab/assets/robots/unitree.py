@@ -17,8 +17,8 @@ from isaaclab.utils import configclass
 
 from unitree_rl_lab.assets.robots import unitree_actuators
 
-UNITREE_MODEL_DIR = "path/to/unitree_model"  # Replace with the actual path to your unitree_model directory
-UNITREE_ROS_DIR = "path/to/unitree_ros"  # Replace with the actual path to your unitree_ros package
+UNITREE_MODEL_DIR = "/home/ubuntu/unitree_model"  # Replace with the actual path to your unitree_model directory
+UNITREE_ROS_DIR = "/home/ubuntu/unitree_ros"  # Replace with the actual path to your unitree_ros package
 
 
 @configclass
@@ -715,3 +715,7 @@ for a in UNITREE_G1_29DOF_MIMIC_CFG.actuators.values():
     for n in names:
         if n in e and n in s and s[n]:
             UNITREE_G1_29DOF_MIMIC_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
+
+
+
+
