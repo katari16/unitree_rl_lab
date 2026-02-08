@@ -6,7 +6,7 @@ from dataclasses import MISSING
 from isaaclab.actuators import DelayedPDActuator, DelayedPDActuatorCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.types import ArticulationActions
-
+from pace_sim2real.utils import PaceDCMotorCfg
 
 class UnitreeActuator(DelayedPDActuator):
     """Unitree actuator class that implements a torque-speed curve for the actuators.
@@ -233,3 +233,26 @@ class UnitreeActuatorCfg_W4010_25(UnitreeActuatorCfg):
     | gear_2 |                | ratio | 5
     """
     armature = 0.00425
+
+
+
+# ------ PACE CONFIGs ------
+@configclass
+class UnitreeActuatorCfg_Go2PACE(PaceDCMotorCfg):
+    """Go2 Actuator Profile with PACE identified physical parameters."""
+    
+    # Physical Limits (Go2 hardware constants)
+    saturation_effort = 23.7
+    effort_limit = 23.7
+    velocity_limit = 30.0
+    
+    # --- IDENTIFIED PHYSICAL IDENTITY (From your .pt file) ---
+    armature = [0.0160, 0.0108, 0.0286, 0.0160, 0.0150, 0.0282, 
+                0.0064, 0.0135, 0.0315, 0.0100, 0.0140, 0.0295]
+    viscous_friction = [0.5615, 0.4219, 0.2667, 0.3317, 0.2501, 0.3808, 
+                        0.4284, 0.3290, 0.2762, 0.3973, 0.3252, 0.2421]
+    friction = [0.0645, 0.0709, 0.1322, 0.0779, 0.0141, 0.1585, 
+                0.1138, 0.2519, 0.4289, 0.0719, 0.1269, 0.0284]
+    encoder_bias = [-0.0718, 0.2051, 0.1565, 0.0939, 0.2101, 0.1569, 
+                    -0.2326, 0.0542, 0.3806, -0.0485, 0.3641, -0.1367]
+    max_delay = 5
