@@ -22,7 +22,7 @@ from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 
 
 
-from unitree_rl_lab.assets.robots.unitree import UNITREE_GO2_CFG as ROBOT_CFG
+from unitree_rl_lab.assets.robots.unitree import UNITREE_GO2_PACE_CFG as ROBOT_CFG
 from unitree_rl_lab.tasks.locomotion import mdp
 from unitree_rl_lab.tasks.locomotion.mdp.temporal_stage_curriculum import TemporalStageCurriculum
 
