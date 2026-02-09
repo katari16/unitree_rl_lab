@@ -217,22 +217,29 @@ class ObservationsCfg:
 
     @configclass
     class PolicyCfg(ObsGroup):
-        """Observations for policy group."""
+        """Observations for policy group.
+        Order matches deployment script: foot_forces(4), base_lin_vel(3), base_ang_vel(3),
+        projected_gravity(3), velocity_commands(3), joint_pos_rel(12), joint_vel_rel(12), last_action(12) = 52 dims.
+        """
 
-        # observation terms (order preserved)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, clip=(-100, 100), noise=Unoise(n_min=-0.2, n_max=0.2))
+        # observation terms (order preserved to match deployment script)
+        foot_contact_forces = ObsTerm(
+            func=mdp.foot_contact_force_norms,
+            scale=0.01,
+            clip=(-100, 100),
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
+        )
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, clip=(-100, 100), noise=Unoise(n_min=-0.1, n_max=0.1))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, clip=(-100, 100), noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, clip=(-100, 100), noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(
             func=mdp.generated_commands, clip=(-100, 100), params={"command_name": "base_velocity"}
         )
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, clip=(-100, 100), noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel_rel = ObsTerm(
-            func=mdp.joint_vel_rel, scale=0.05, clip=(-100, 100), noise=Unoise(n_min=-1.5, n_max=1.5)
-        )
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, clip=(-100, 100), noise=Unoise(n_min=-1.5, n_max=1.5))
         last_action = ObsTerm(func=mdp.last_action, clip=(-100, 100))
 
         def __post_init__(self):
-            # self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
@@ -382,7 +389,7 @@ class RobotEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 1
+        self.decimation = 4
         self.episode_length_s = 20.0
         # simulation settings
         self.sim.dt = 0.005

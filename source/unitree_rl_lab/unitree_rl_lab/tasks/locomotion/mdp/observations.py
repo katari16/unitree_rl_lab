@@ -8,6 +8,13 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
+def foot_contact_force_norms(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
+    """Norm of net contact forces on foot bodies. Shape: [num_envs, num_feet]."""
+    contact_sensor = env.scene.sensors[sensor_cfg.name]
+    forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :]
+    return torch.norm(forces, dim=-1)
+
+
 def gait_phase(env: ManagerBasedRLEnv, period: float) -> torch.Tensor:
     if not hasattr(env, "episode_length_buf"):
         env.episode_length_buf = torch.zeros(env.num_envs, device=env.device, dtype=torch.long)
