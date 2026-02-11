@@ -223,13 +223,13 @@ class ObservationsCfg:
         """
 
         # observation terms (order preserved to match deployment script)
-        foot_contact_forces = ObsTerm(
-            func=mdp.foot_contact_force_norms,
-            scale=0.01,
-            clip=(-100, 100),
-            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
-        )
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, clip=(-100, 100), noise=Unoise(n_min=-0.1, n_max=0.1))
+        # foot_contact_forces = ObsTerm(
+        #     func=mdp.foot_contact_force_norms,
+        #     scale=0.01,
+        #     clip=(-100, 100),
+        #     params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
+        # )
+        # base_lin_vel = ObsTerm(func=mdp.base_lin_vel, clip=(-100, 100), noise=Unoise(n_min=-0.1, n_max=0.1))
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, clip=(-100, 100), noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, clip=(-100, 100), noise=Unoise(n_min=-0.05, n_max=0.05))
         velocity_commands = ObsTerm(
